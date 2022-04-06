@@ -37,6 +37,10 @@ else
     exit 1
 fi
 
+# Is opcache-manager plugin installed
+$WP --path="$root/cms" opcache > /dev/null 2>&1
+WP_OPCACHE_INSTALLED=$?
+
 if [[ -d /etc/nginx/conf.d ]]; then
     mapfile -t VHOSTS < <(/bin/grep -iRls server_name /etc/nginx/conf.d)
 fi
@@ -62,9 +66,11 @@ do
             # git commit changes
             $GIT --git-dir="$root/../.git" --work-tree="$root/../" add composer.lock
             $GIT --git-dir="$root/../.git" --work-tree="$root/../" commit -m"versions updated"
+
             # Invalidate and warmup opcache
-            # TODO: check this sub command exists.
-            $WP --path="$root/cms" opcache warmup --yes > /dev/null 2>&1
+            if [[ ! $WP_OPCACHE_INSTALLED ]]; then
+                $WP --path="$root/cms" opcache warmup --yes > /dev/null 2>&1
+            fi
         fi
     fi
 done

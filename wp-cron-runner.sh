@@ -23,6 +23,20 @@ else
     exit 1
 fi
 
+if command -v git > /dev/null 2>&1; then
+    GIT=$(command -v git)
+else
+    echo "Err: git is not installed."
+    exit 1
+fi
+
+if command -v md5sum > /dev/null 2>&1; then
+    MD5BIN=$(command -v md5sum)
+else
+    echo "Err: md5sum is not installed."
+    exit 1
+fi
+
 if [[ -d /etc/nginx/conf.d ]]; then
     mapfile -t VHOSTS < <(/bin/grep -iRls server_name /etc/nginx/conf.d)
 fi
@@ -38,7 +52,19 @@ do
     if [[ -f "$root/wp-config.php" ]]; then
         # Run cron jobs
         $WP --path="$root/cms" cron event run --due-now
+
         # composer update
+        MD5SUM=$($MD5BIN "$root/../composer.lock" | cut -d" " -f1)
         $COMPOSERBIN --working-dir="$root/../" update -q
+        MD5SUMNEW=$($MD5BIN "$root/../composer.lock" | cut -d" " -f1)
+
+        if [[ $MD5SUMNEW != $MD5SUM ]]; then
+            # git commit changes
+            $GIT --git-dir="$root/../.git" --work-tree="$root/../" add composer.lock
+            $GIT --git-dir="$root/../.git" --work-tree="$root/../" commit -m"versions updated"
+            # Invalidate and warmup opcache
+            # TODO: check this sub command exists.
+            $WP --path="$root/cms" opcache warmup --yes > /dev/null 2>&1
+        fi
     fi
 done

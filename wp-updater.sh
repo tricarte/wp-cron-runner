@@ -66,9 +66,17 @@ do
             $GIT --git-dir="$root/../.git" --work-tree="$root/../" commit -m"versions updated"
 
             # Invalidate cache
-            if [[ ! $WP_OPCACHE_INSTALLED ]]; then
-                $WP --path="$root/cms" opcache invalidate --yes > /dev/null 2>&1
-            fi
+            # if [[ ! $WP_OPCACHE_INSTALLED ]]; then
+            #     $WP --path="$root/cms" opcache invalidate --yes > /dev/null 2>&1
+            # fi
+
+            # Invalidate opcache
+            # https://www.php.net/manual/tr/function.opcache-reset.php#121513
+            SITEURL=($WP --skip-plugins --path="$root/cms" config get WP_HOME)
+            # RANDOM_NAME=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 13)
+            echo "<?php opcache_reset(); ?>" > "$root/clear_opcache.php"
+            /usr/bin/curl "$SITEURL/clear_opcache.php"
+            /usr/bin/rm "$root/clear_opcache.php"
         fi
     fi
 done

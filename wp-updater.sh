@@ -2,7 +2,7 @@
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
 
-LOCKFILE=/var/lock/wp-cron-runner.lock
+LOCKFILE=/var/lock/wp-updater.lock
 
 set -o noclobber
 exec {lockfd}<> "${LOCKFILE}" || exit 1
@@ -54,7 +54,21 @@ do
 
     # Make sure this is a wp site
     if [[ -f "$root/wp-config.php" ]]; then
-        # Run cron jobs
-        $WP --path="$root/cms" cron event run --due-now
+
+        # composer update
+        MD5SUM=$($MD5BIN "$root/../composer.lock" | cut -d" " -f1)
+        $COMPOSERBIN --working-dir="$root/../" update -q
+        MD5SUMNEW=$($MD5BIN "$root/../composer.lock" | cut -d" " -f1)
+
+        if [[ $MD5SUMNEW != $MD5SUM ]]; then
+            # git commit changes
+            $GIT --git-dir="$root/../.git" --work-tree="$root/../" add composer.lock
+            $GIT --git-dir="$root/../.git" --work-tree="$root/../" commit -m"versions updated"
+
+            # Invalidate and warmup opcache
+            if [[ ! $WP_OPCACHE_INSTALLED ]]; then
+                $WP --path="$root/cms" opcache warmup --yes > /dev/null 2>&1
+            fi
+        fi
     fi
 done

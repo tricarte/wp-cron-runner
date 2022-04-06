@@ -65,9 +65,9 @@ do
             $GIT --git-dir="$root/../.git" --work-tree="$root/../" add composer.lock
             $GIT --git-dir="$root/../.git" --work-tree="$root/../" commit -m"versions updated"
 
-            # Invalidate and warmup opcache
+            # Invalidate cache
             if [[ ! $WP_OPCACHE_INSTALLED ]]; then
-                $WP --path="$root/cms" opcache warmup --yes > /dev/null 2>&1
+                $WP --path="$root/cms" opcache invalidate --yes > /dev/null 2>&1
             fi
         fi
     fi

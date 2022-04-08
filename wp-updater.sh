@@ -52,6 +52,10 @@ do
     root_line=$(echo $root_line)
     root=$(echo "$root_line" | cut -d" " -f2 | tr -d ';')
 
+    if [[  $root =~ 'twpr' ]]; then
+        continue
+    fi
+
     # Make sure this is a wp site
     if [[ -f "$root/wp-config.php" ]]; then
 

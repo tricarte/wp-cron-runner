@@ -38,8 +38,10 @@ else
 fi
 
 # Is opcache-manager plugin installed
-$WP --path="$root/cms" opcache > /dev/null 2>&1
-WP_OPCACHE_INSTALLED=$?
+# This command must be run as www-data.
+# Or you have to be a member of www-data group
+# $WP --path="$root/cms" opcache > /dev/null 2>&1
+# WP_OPCACHE_INSTALLED=$?
 
 if [[ -d /etc/nginx/conf.d ]]; then
     mapfile -t VHOSTS < <(/bin/grep -iRls server_name /etc/nginx/conf.d)
@@ -74,11 +76,12 @@ do
             #     $WP --path="$root/cms" opcache invalidate --yes > /dev/null 2>&1
             # fi
 
-            # Invalidate opcache
+            # Invalidate opcache and apcu cache
             # https://www.php.net/manual/tr/function.opcache-reset.php#121513
+            # Remember that this invalidates caches of all virtual hosts
             SITEURL=$($WP --skip-plugins --path="$root/cms" config get WP_HOME)
             # RANDOM_NAME=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 13)
-            echo "<?php opcache_reset(); ?>" > "$root/clear_opcache.php"
+            echo "<?php opcache_reset(); apcu_clear_cache(); ?>" > "$root/clear_opcache.php"
             /usr/bin/curl "$SITEURL/clear_opcache.php"
             /bin/rm "$root/clear_opcache.php"
         fi

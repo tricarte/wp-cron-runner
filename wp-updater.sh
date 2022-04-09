@@ -37,6 +37,13 @@ else
     exit 1
 fi
 
+if command -v msmtp > /dev/null 2>&1; then
+    MSMTP=$(command -v msmtp)
+else
+    echo "Err: msmtp is not installed."
+    exit 1
+fi
+
 # Is opcache-manager plugin installed
 # This command must be run as www-data.
 # Or you have to be a member of www-data group
@@ -46,6 +53,8 @@ fi
 if [[ -d /etc/nginx/conf.d ]]; then
     mapfile -t VHOSTS < <(/bin/grep -iRls server_name /etc/nginx/conf.d)
 fi
+
+# UPDATES_LIST=""
 
 for host in "${VHOSTS[@]}"
 do
@@ -60,6 +69,17 @@ do
 
     # Make sure this is a wp site
     if [[ -f "$root/wp-config.php" ]]; then
+
+        # TODO: Find out plugins that need major version upgrade using 'wp plugin list --format=json'
+        UPDATES=$($COMPOSERBIN --working-dir="$root/../" update --dry-run 2>&1 | sed -ne '/Package operations/,$ p' | grep "Upgrading" | awk '{ print substr ($0, 15 ) }')
+
+        if [[ -n $UPDATES ]]; then
+            # UPDATES_LIST+="$UPDATES\n"
+            AdminEmail=$($WP --skip-plugins --path="$root/cms" user get 1 --field=user_email)
+            if [[ $AdminEmail != 'info@example.com' ]]; then
+                echo -e "Subject: Updates for site $host\n\n$UPDATES" $MSMTP "$AdminEmail"
+            fi
+        fi
 
         # composer update
         MD5SUM=$($MD5BIN "$root/../composer.lock" | cut -d" " -f1)

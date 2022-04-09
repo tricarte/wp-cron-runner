@@ -81,17 +81,16 @@ do
             if [[ $AdminEmail != 'info@example.com' ]]; then
                 echo -e "Subject: Updates for site $host\n\n$UPDATES" $MSMTP "$AdminEmail"
             fi
-        fi
 
-        # composer update
-        MD5SUM=$($MD5BIN "$root/../composer.lock" | cut -d" " -f1)
-        $COMPOSERBIN --working-dir="$root/../" update -q
-        MD5SUMNEW=$($MD5BIN "$root/../composer.lock" | cut -d" " -f1)
+            # composer update
+            MD5SUM=$($MD5BIN "$root/../composer.lock" | cut -d" " -f1)
+            $COMPOSERBIN --working-dir="$root/../" update -q
+            MD5SUMNEW=$($MD5BIN "$root/../composer.lock" | cut -d" " -f1)
 
-        if [[ $MD5SUMNEW != $MD5SUM ]]; then
-            # git commit changes
-            $GIT --git-dir="$root/../.git" --work-tree="$root/../" add composer.lock
-            $GIT --git-dir="$root/../.git" --work-tree="$root/../" commit -m"versions updated"
+            if [[ $MD5SUMNEW != $MD5SUM ]]; then
+                # git commit changes
+                $GIT --git-dir="$root/../.git" --work-tree="$root/../" add composer.lock
+                $GIT --git-dir="$root/../.git" --work-tree="$root/../" commit -m"versions updated"
 
             # Invalidate cache
             # if [[ ! $WP_OPCACHE_INSTALLED ]]; then
@@ -110,5 +109,7 @@ do
             /usr/bin/curl "$SITEURL/clear_cache.php"
             /bin/rm "$root/clear_cache.php"
         fi
+    fi
+
     fi
 done

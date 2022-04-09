@@ -71,6 +71,8 @@ do
     if [[ -f "$root/wp-config.php" ]]; then
 
         # TODO: Find out plugins that need major version upgrade using 'wp plugin list --format=json'
+
+        # TODO: Maybe you should update plugins after testing and reviewing them in a local env.
         UPDATES=$($COMPOSERBIN --working-dir="$root/../" update --dry-run 2>&1 | sed -ne '/Package operations/,$ p' | grep "Upgrading" | awk '{ print substr ($0, 15 ) }')
 
         if [[ -n $UPDATES ]]; then

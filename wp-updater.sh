@@ -79,11 +79,14 @@ do
             # Invalidate opcache and apcu cache
             # https://www.php.net/manual/tr/function.opcache-reset.php#121513
             # Remember that this invalidates caches of all virtual hosts
+            # UPDATE: Since I'm using opcache.validate_timestamps=1
+            # This no longer resets opcache, just the apcu cache.
             SITEURL=$($WP --skip-plugins --path="$root/cms" config get WP_HOME)
             # RANDOM_NAME=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 13)
-            echo "<?php opcache_reset(); apcu_clear_cache(); ?>" > "$root/clear_opcache.php"
-            /usr/bin/curl "$SITEURL/clear_opcache.php"
-            /bin/rm "$root/clear_opcache.php"
+            # echo "<?php opcache_reset(); apcu_clear_cache(); ?>" > "$root/clear_cache.php"
+            echo "<?php apcu_clear_cache(); ?>" > "$root/clear_cache.php"
+            /usr/bin/curl "$SITEURL/clear_cache.php"
+            /bin/rm "$root/clear_cache.php"
         fi
     fi
 done

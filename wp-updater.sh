@@ -69,8 +69,6 @@ do
 
     # Make sure this is a wp site
     if [[ -f "$root/wp-config.php" ]]; then
-
-        # TODO: Maybe you should update plugins after testing and reviewing them in a local env.
         UPDATES=$($COMPOSERBIN --working-dir="$root/../" update --dry-run 2>&1 | sed -ne '/Package operations/,$ p' | grep "Upgrading" | awk '{ print substr ($0, 15 ) }')
 
         if [[ -n $UPDATES ]]; then
@@ -85,10 +83,10 @@ do
             $COMPOSERBIN --working-dir="$root/../" update -q
             MD5SUMNEW=$($MD5BIN "$root/../composer.lock" | cut -d" " -f1)
 
-            if [[ $MD5SUMNEW != $MD5SUM ]]; then
+            if [[ $MD5SUMNEW != "$MD5SUM" ]]; then
                 # git commit changes
                 $GIT --git-dir="$root/../.git" --work-tree="$root/../" add composer.lock
-                $GIT --git-dir="$root/../.git" --work-tree="$root/../" commit -m"versions updated"
+                $GIT --git-dir="$root/../.git" --work-tree="$root/../" commit -m"Versions updated..." -m"$UPDATES" -q
 
             # Invalidate cache
             # if [[ ! $WP_OPCACHE_INSTALLED ]]; then

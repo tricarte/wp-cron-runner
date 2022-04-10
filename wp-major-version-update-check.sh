@@ -33,23 +33,54 @@ do
         continue
     fi
 
+    # The message that will be sent to the site admin
+    MAJOR_UPGRADES=""
+
     # Make sure this is a wp site
     if [[ -f "$root/wp-config.php" ]]; then
-		MAJOR_UPGRADES=""
+		# Find out major core upgrades
+        MAJOR_CORE=$($WP --skip-plugins --path="$root/cms" core check-update --major --fields=version --format=csv | tail -n +2)
+
+        if [[ -n $MAJOR_CORE ]]; then
+           MAJOR_UPGRADES+="$host can be upgraded to a major WP version: $MAJOR_CORE.\n\n" 
+        fi
+
+		# Find out major plugin upgrades
+		MAJOR_PLUGIN_UPGRADES=""
 		for plugin in $($WP --skip-plugins --path="$root/cms" plugin list --update=available --fields=name,version,update_version --format=csv | tail -n +2)
 		do
 			IFS="$sep" read -rd '' name version update_version < <(printf '%s%s' "$plugin" "$sep") || true
 			CURVERSION="${version#[vV]}"
 			UPDATEVERSION="${update_version#[vV]}"
 			if [[ ${UPDATEVERSION%%\.*} > ${CURVERSION%%\.*} ]]; then
-				MAJOR_UPGRADES+="$name needs a major version upgrade: $update_version\n"
+				MAJOR_PLUGIN_UPGRADES+="Plugin $name have a major version upgrade: $update_version\n"
 			fi
 		done
+
+		if [[ -n $MAJOR_PLUGIN_UPGRADES ]]; then
+		    MAJOR_UPGRADES+="$MAJOR_PLUGIN_UPGRADES\n\n"
+        fi
+
+        # Find out major theme updates
+		MAJOR_THEME_UPGRADES=""
+		for theme in $($WP --skip-plugins --path="$root/cms" theme list --update=available --fields=name,version,update_version --format=csv | tail -n +2)
+		do
+			IFS="$sep" read -rd '' name version update_version < <(printf '%s%s' "$theme" "$sep") || true
+			CURVERSION="${version#[vV]}"
+			UPDATEVERSION="${update_version#[vV]}"
+			if [[ ${UPDATEVERSION%%\.*} > ${CURVERSION%%\.*} ]]; then
+				MAJOR_THEME_UPGRADES+="Theme $name have a major version upgrade: $update_version\n"
+			fi
+		done
+
+		if [[ -n $MAJOR_THEME_UPGRADES ]]; then
+		    MAJOR_UPGRADES+="$MAJOR_THEME_UPGRADES\n\n"
+        fi
 
 		if [[ -n $MAJOR_UPGRADES ]]; then
 			AdminEmail=$($WP --skip-plugins --path="$root/cms" user get 1 --field=user_email)
 			if [[ $AdminEmail != 'info@example.com' ]]; then
-				echo -e "Subject: Plugin updates with major versions available for $host\n\n$MAJOR_UPGRADES" | $MSMTP "$AdminEmail"
+				echo -e "Subject: Updates with major version changes available for $host\n\n$MAJOR_UPGRADES" | $MSMTP "$AdminEmail"
 			fi
 		fi
     fi

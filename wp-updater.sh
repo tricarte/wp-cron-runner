@@ -70,12 +70,14 @@ do
     # Make sure this is a wp site
     if [[ -f "$root/wp-config.php" ]]; then
         UPDATES=$($COMPOSERBIN --working-dir="$root/../" update --dry-run 2>&1 | sed -ne '/Package operations/,$ p' | grep "Upgrading" | awk '{ print substr ($0, 15 ) }')
+        UPDATEMSGBODY="These packages in composer.json will be updated:\n\n"
 
         if [[ -n $UPDATES ]]; then
             # UPDATES_LIST+="$UPDATES\n"
+            UPDATEMSGBODY+=$UPDATES
             AdminEmail=$($WP --skip-plugins --path="$root/cms" user get 1 --field=user_email)
             if [[ $AdminEmail != 'info@example.com' ]]; then
-                echo -e "Subject: Updates for site $host\n\n$UPDATES" | $MSMTP "$AdminEmail"
+                echo -e "Subject: Updates for site "$(/usr/bin/basename $host)"\n\n$UPDATEMSGBODY" | $MSMTP "$AdminEmail"
             fi
 
             # composer update

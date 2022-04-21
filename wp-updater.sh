@@ -77,7 +77,7 @@ do
             UPDATEMSGBODY+=$UPDATES
             AdminEmail=$($WP --skip-plugins --path="$root/cms" user get 1 --field=user_email)
             if [[ $AdminEmail != 'info@example.com' ]]; then
-                echo -e "Subject: Updates for site "$(/usr/bin/basename $host)"\n\n$UPDATEMSGBODY" | $MSMTP "$AdminEmail"
+                echo -e "Subject: Updates for site $(/usr/bin/basename "$host")\n\n$UPDATEMSGBODY" | $MSMTP "$AdminEmail"
             fi
 
             # composer update

@@ -9,37 +9,12 @@ exec {lockfd}<> "${LOCKFILE}" || exit 1
 set +o noclobber
 flock --exclusive --nonblock ${lockfd} || exit 1
 
-if command -v composer > /dev/null 2>&1; then
-    COMPOSERBIN=$(command -v composer)
-else
-    echo "Err: Composer cli is not installed."
-    exit 1
-fi
-
 if command -v wp > /dev/null 2>&1; then
     WP=$(command -v wp)
 else
     echo "Err: WPCLI is not installed."
     exit 1
 fi
-
-if command -v git > /dev/null 2>&1; then
-    GIT=$(command -v git)
-else
-    echo "Err: git is not installed."
-    exit 1
-fi
-
-if command -v md5sum > /dev/null 2>&1; then
-    MD5BIN=$(command -v md5sum)
-else
-    echo "Err: md5sum is not installed."
-    exit 1
-fi
-
-# Is opcache-manager plugin installed
-$WP --path="$root/cms" opcache > /dev/null 2>&1
-WP_OPCACHE_INSTALLED=$?
 
 if [[ -d /etc/nginx/conf.d ]]; then
     mapfile -t VHOSTS < <(/bin/grep -iRls server_name /etc/nginx/conf.d)

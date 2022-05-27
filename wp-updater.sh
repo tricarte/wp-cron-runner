@@ -105,7 +105,9 @@ do
             # echo "<?php opcache_reset(); apcu_clear_cache(); ?>" > "$root/clear_cache.php"
             echo "<?php apcu_clear_cache(); ?>" > "$root/clear_cache.php"
             /usr/bin/curl "$SITEURL/clear_cache.php"
-            /bin/rm "$root/clear_cache.php"
+            if [[ -f "$root/clear_cache.php" ]]; then
+                /bin/rm "$root/clear_cache.php"
+            fi
         fi
     fi
 

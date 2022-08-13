@@ -4,7 +4,8 @@
 # in /etc/nginx/conf.d directory.
 #
 # I preferred to scan /etc/nginx/conf.d instead of doing a search in
-# /var/www or some other place.
+# /var/www or some other place. Virtual host filenames must end with
+# 'conf.d'.
 #-------------------------------------------------------------------
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin\
@@ -25,7 +26,7 @@ else
 fi
 
 if [[ -d /etc/nginx/conf.d ]]; then
-    mapfile -t VHOSTS < <(/bin/grep -iRls server_name /etc/nginx/conf.d)
+    mapfile -t VHOSTS < <(/bin/grep -iRls server_name /etc/nginx/conf.d/*.conf)
 fi
 
 for host in "${VHOSTS[@]}"

@@ -3,7 +3,8 @@
 # Checks core, plugin and theme major updates and notifies admin
 # for a wpstarter based WordPress site
 #
-# Virtual hosts are searched in /etc/nginx/conf.d
+# Virtual hosts are searched in /etc/nginx/conf.d and their
+# filenames must end with '.conf'.
 #---------------------------------------------------------------
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin\
@@ -31,7 +32,7 @@ else
 fi
 
 if [[ -d /etc/nginx/conf.d ]]; then
-    mapfile -t VHOSTS < <(/bin/grep -iRls server_name /etc/nginx/conf.d)
+    mapfile -t VHOSTS < <(/bin/grep -iRls server_name /etc/nginx/conf.d/*.conf)
 fi
 
 sep=","

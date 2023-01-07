@@ -12,43 +12,43 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin\
 LOCKFILE=/var/lock/wp-updater.lock
 
 set -o noclobber
-exec {lockfd}<> "${LOCKFILE}" || exit 1
+exec {lockfd}<>"${LOCKFILE}" || exit 1
 set +o noclobber
 flock --exclusive --nonblock ${lockfd} || exit 1
 
-if command -v composer > /dev/null 2>&1; then
-    COMPOSERBIN=$(command -v composer)
+if command -v composer >/dev/null 2>&1; then
+  COMPOSERBIN=$(command -v composer)
 else
-    echo "Err: Composer cli is not installed."
-    exit 1
+  echo "Err: Composer cli is not installed."
+  exit 1
 fi
 
-if command -v wp > /dev/null 2>&1; then
-    WP=$(command -v wp)
+if command -v wp >/dev/null 2>&1; then
+  WP=$(command -v wp)
 else
-    echo "Err: WPCLI is not installed."
-    exit 1
+  echo "Err: WPCLI is not installed."
+  exit 1
 fi
 
-if command -v git > /dev/null 2>&1; then
-    GIT=$(command -v git)
+if command -v git >/dev/null 2>&1; then
+  GIT=$(command -v git)
 else
-    echo "Err: git is not installed."
-    exit 1
+  echo "Err: git is not installed."
+  exit 1
 fi
 
-if command -v md5sum > /dev/null 2>&1; then
-    MD5BIN=$(command -v md5sum)
+if command -v md5sum >/dev/null 2>&1; then
+  MD5BIN=$(command -v md5sum)
 else
-    echo "Err: md5sum is not installed."
-    exit 1
+  echo "Err: md5sum is not installed."
+  exit 1
 fi
 
-if command -v msmtp > /dev/null 2>&1; then
-    MSMTP=$(command -v msmtp)
+if command -v msmtp >/dev/null 2>&1; then
+  MSMTP=$(command -v msmtp)
 else
-    echo "Err: msmtp is not installed."
-    exit 1
+  echo "Err: msmtp is not installed."
+  exit 1
 fi
 
 # Is opcache-manager plugin installed
@@ -58,72 +58,73 @@ fi
 # WP_OPCACHE_INSTALLED=$?
 
 if [[ -d /etc/nginx/conf.d ]]; then
-    mapfile -t VHOSTS < <(/bin/grep -iRls server_name /etc/nginx/conf.d/*.conf)
+  mapfile -t VHOSTS < <(/bin/grep -iRls server_name /etc/nginx/conf.d/*.conf)
 fi
 
 # UPDATES_LIST=""
 
-for host in "${VHOSTS[@]}"
-do
-    # Parse root directive in vhost config file
-    root_line=$(
-        /bin/grep -s -E '^[[:space:]]*?root[[:space:]]{1}[a-zA-Z0-9\/\.\-]+;$' "$host"
+for host in "${VHOSTS[@]}"; do
+  # Parse root directive in vhost config file
+  root_line=$(
+    /bin/grep -s -E '^[[:space:]]*?root[[:space:]]{1}[a-zA-Z0-9\/\.\-]+;$' "$host"
+  )
+  root_line=$(echo $root_line) # Trim spaces
+  root=$(echo "$root_line" | cut -d" " -f2 | tr -d ';')
+
+  if [[ $root =~ 'twpr' ]]; then
+    continue
+  fi
+
+  owner=$(stat -c "%U" "$(dirname "$root")")
+
+  # Make sure this is a wpstarter based WordPress site
+  if [[ -f "$root/../wpstarter.json" ]]; then
+    UPDATES=$(
+      sudo -u "$owner" "$COMPOSERBIN" --working-dir="$root/../" update --dry-run 2>&1 |
+        sed -ne '/Package operations/,$ p' |
+        grep "Upgrading" |
+        awk '{ print substr ($0, 15 ) }'
     )
-    root_line=$(echo $root_line) # Trim spaces
-    root=$(echo "$root_line" | cut -d" " -f2 | tr -d ';')
+    UPDATEMSGBODY="These packages in composer.json will be updated:\n\n"
 
-    if [[  $root =~ 'twpr' ]]; then
-        continue
-    fi
+    if [[ -n $UPDATES ]]; then
+      # UPDATES_LIST+="$UPDATES\n"
+      UPDATEMSGBODY+=$UPDATES
+      AdminEmail=$(
+        sudo -u "$owner" "$WP" --skip-plugins --path="$root/cms" user get 1 --field=user_email
+      )
+      if [[ $AdminEmail =~ example.com ]]; then
+        echo -e "Subject: Updates for site $(/usr/bin/basename "$host")\n\n$UPDATEMSGBODY" |
+          sudo -u "$owner" "$MSMTP" "$AdminEmail"
+      fi
 
-    # Make sure this is a wpstarter based WordPress site
-    if [[ -f "$root/../wpstarter.json" ]]; then
-        UPDATES=$(
-        $COMPOSERBIN --working-dir="$root/../" update --dry-run 2>&1 \
-            | sed -ne '/Package operations/,$ p' \
-            | grep "Upgrading" \
-            | awk '{ print substr ($0, 15 ) }'
-        )
-        UPDATEMSGBODY="These packages in composer.json will be updated:\n\n"
+      # composer update
+      MD5SUM=$($MD5BIN "$root/../composer.lock" | cut -d" " -f1)
+      sudo -u "$owner" "$COMPOSERBIN" --working-dir="$root/../" update -q
+      MD5SUMNEW=$($MD5BIN "$root/../composer.lock" | cut -d" " -f1)
 
-        if [[ -n $UPDATES ]]; then
-            # UPDATES_LIST+="$UPDATES\n"
-            UPDATEMSGBODY+=$UPDATES
-            AdminEmail=$(
-                $WP --skip-plugins --path="$root/cms" user get 1 --field=user_email
-            )
-            if [[ $AdminEmail != 'info@example.com' ]]; then
-                echo -e "Subject: Updates for site $(/usr/bin/basename "$host")\n\n$UPDATEMSGBODY" \
-                    | $MSMTP "$AdminEmail"
-            fi
+      if [[ $MD5SUMNEW != "$MD5SUM" ]]; then
+        # git commit changes
+        sudo -u "$owner" "$GIT" --git-dir="$root/../.git" --work-tree="$root/../" \
+          add composer.lock
+        sudo -u "$owner" "$GIT" --git-dir="$root/../.git" --work-tree="$root/../" \
+          commit -m"Versions updated..." -m"$UPDATES" -q
 
-            # composer update
-            MD5SUM=$($MD5BIN "$root/../composer.lock" | cut -d" " -f1)
-            $COMPOSERBIN --working-dir="$root/../" update -q
-            MD5SUMNEW=$($MD5BIN "$root/../composer.lock" | cut -d" " -f1)
+        # Invalidate cache
+        # if [[ ! $WP_OPCACHE_INSTALLED ]]; then
+        #     $WP --path="$root/cms" opcache invalidate --yes > /dev/null 2>&1
+        # fi
 
-            if [[ $MD5SUMNEW != "$MD5SUM" ]]; then
-                # git commit changes
-                $GIT --git-dir="$root/../.git" --work-tree="$root/../" \
-                    add composer.lock
-                $GIT --git-dir="$root/../.git" --work-tree="$root/../" \
-                    commit -m"Versions updated..." -m"$UPDATES" -q
-
-            # Invalidate cache
-            # if [[ ! $WP_OPCACHE_INSTALLED ]]; then
-            #     $WP --path="$root/cms" opcache invalidate --yes > /dev/null 2>&1
-            # fi
-
-            # UPDATE: Since I'm using opcache.validate_timestamps=1
-            # This no longer resets opcache, just the apcu cache.
-            SITEURL=$($WP --skip-plugins --path="$root/cms" config get WP_HOME)
-            echo "<?php apcu_clear_cache(); ?>" > "$root/clear_cache.php"
-            /usr/bin/curl "$SITEURL/clear_cache.php"
-            if [[ -f "$root/clear_cache.php" ]]; then
-                /bin/rm "$root/clear_cache.php"
-            fi
+        # UPDATE: Since I'm using opcache.validate_timestamps=1
+        # This no longer resets opcache, just the apcu cache.
+        SITEURL=$(sudo -u "$owner" "$WP" --skip-plugins --path="$root/cms" config get WP_HOME)
+        echo "<?php apcu_clear_cache(); ?>" >"$root/clear_cache.php"
+        /usr/bin/curl "$SITEURL/clear_cache.php"
+        if [[ -f "$root/clear_cache.php" ]]; then
+          /bin/rm "$root/clear_cache.php"
         fi
+      fi
     fi
 
-    fi
+  fi
 done

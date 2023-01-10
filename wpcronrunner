@@ -37,10 +37,10 @@ for host in "${VHOSTS[@]}"; do
   root_line=$(echo $root_line) # Trim spaces
   root=$(echo "$root_line" | cut -d" " -f2 | tr -d ';')
 
-  owner=$(stat -c "%U" "$(dirname "$root")")
-
   # Make sure this is a wpstarter based WP site
   if [[ -f "$root/../wpstarter.json" ]]; then
+    owner=$(stat -c "%U" "$(dirname "$root")")
+
     # Run cron jobs
     sudo -u "$owner" "$WP" --path="$root/cms" cron event run --due-now
   fi

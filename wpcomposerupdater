@@ -75,10 +75,10 @@ for host in "${VHOSTS[@]}"; do
     continue
   fi
 
-  owner=$(stat -c "%U" "$(dirname "$root")")
-
   # Make sure this is a wpstarter based WordPress site
   if [[ -f "$root/../wpstarter.json" ]]; then
+    owner=$(stat -c "%U" "$(dirname "$root")")
+
     UPDATES=$(
       sudo -u "$owner" "$COMPOSERBIN" --working-dir="$root/../" update --dry-run 2>&1 |
         sed -ne '/Package operations/,$ p' |

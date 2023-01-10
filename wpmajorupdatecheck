@@ -45,8 +45,6 @@ for host in "${VHOSTS[@]}"; do
   root_line=$(echo $root_line) # Trim spaces
   root=$(echo "$root_line" | cut -d" " -f2 | tr -d ';')
 
-  owner=$(stat -c "%U" "$(dirname "$root")")
-
   if [[ $root =~ 'twpr' ]]; then
     continue
   fi
@@ -56,6 +54,8 @@ for host in "${VHOSTS[@]}"; do
 
   # Make sure this is a wp site
   if [[ -f "$root/wp-config.php" ]]; then
+    owner=$(stat -c "%U" "$(dirname "$root")")
+
     # Find out major core upgrades
     MAJOR_CORE=$(
       sudo -u "$owner" "$WP" --skip-plugins --path="$root/cms" core check-update \

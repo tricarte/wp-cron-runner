@@ -104,7 +104,7 @@ for host in "${VHOSTS[@]}"; do
 
     if [[ -n $MAJOR_UPGRADES ]]; then
       AdminEmail=$(sudo -u "$owner" "$WP" --skip-plugins --path="$root/cms" user get 1 --field=user_email)
-      if [[ $AdminEmail =~ example.com ]]; then
+      if [[ ! $AdminEmail =~ example.com ]]; then
         echo -e "Subject: Updates with major version changes available for $host\n\n$MAJOR_UPGRADES" |
           sudo -u "$owner" "$MSMTP" "$AdminEmail"
       fi

@@ -93,7 +93,7 @@ for host in "${VHOSTS[@]}"; do
       AdminEmail=$(
         sudo -u "$owner" "$WP" --skip-plugins --path="$root/cms" user get 1 --field=user_email
       )
-      if [[ $AdminEmail =~ example.com ]]; then
+      if [[ ! $AdminEmail =~ example.com ]]; then
         echo -e "Subject: Updates for site $(/usr/bin/basename "$host")\n\n$UPDATEMSGBODY" |
           sudo -u "$owner" "$MSMTP" "$AdminEmail"
       fi
@@ -118,7 +118,8 @@ for host in "${VHOSTS[@]}"; do
         # UPDATE: Since I'm using opcache.validate_timestamps=1
         # This no longer resets opcache, just the apcu cache.
         SITEURL=$(sudo -u "$owner" "$WP" --skip-plugins --path="$root/cms" config get WP_HOME)
-        echo "<?php apcu_clear_cache(); ?>" >"$root/clear_cache.php"
+        # echo "<?php apcu_clear_cache(); ?>" >"$root/clear_cache.php"
+        echo "<?php apcu_clear_cache(); ?>" | sudo -u "$owner" tee "${root}/clear_cache.php"  > /dev/null
         /usr/bin/curl "$SITEURL/clear_cache.php"
         if [[ -f "$root/clear_cache.php" ]]; then
           /bin/rm "$root/clear_cache.php"

@@ -10,13 +10,6 @@
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin\
 :/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
 
-LOCKFILE=/var/lock/wp-major-version-update-check.lock
-
-set -o noclobber
-exec {lockfd}<>"${LOCKFILE}" || exit 1
-set +o noclobber
-flock --exclusive --nonblock ${lockfd} || exit 1
-
 if command -v wp >/dev/null 2>&1; then
   WP=$(command -v wp)
 else

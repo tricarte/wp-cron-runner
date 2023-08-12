@@ -108,6 +108,9 @@ for host in "${VHOSTS[@]}"; do
         #     $WP --path="$root/cms" opcache invalidate --yes > /dev/null 2>&1
         # fi
 
+        # TODO: This must be tested
+        sudo -u "$owner" "$WP" --skip-plugins --path="$root/cms" core update-db
+
         # UPDATE: Since I'm using opcache.validate_timestamps=1
         # This no longer resets opcache, just the apcu cache.
         SITEURL=$(sudo -u "$owner" "$WP" --skip-plugins --path="$root/cms" config get WP_HOME)
